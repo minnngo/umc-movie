@@ -1,8 +1,9 @@
 package com.umc.movie.auth;
 
-import com.umc.movie.exception.ErrorCode;
-import com.umc.movie.exception.GeneralException;
+import com.umc.movie.exception.ApiException;
+import com.umc.movie.interceptor.AuthInterceptor;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -27,10 +28,10 @@ public class LoginMemberArgumentResolver implements HandlerMethodArgumentResolve
             NativeWebRequest webRequest,
             WebDataBinderFactory binderFactory
     ) {
-        Object memberId = webRequest.getAttribute(AuthInterceptor.MEMBER_ID_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
-        // 인터셉터 경로에 등록하지 않은 API에서 @LoginMember를 쓰면 여기서 막힙니다.
+        Object memberId = webRequest.getAttribute(AuthInterceptor.MEMBER_ID, RequestAttributes.SCOPE_REQUEST);
+        // 관문에서 열어둔(제외한) 경로에서 @LoginMember를 쓰면 memberId가 없어 여기서 막힙니다.
         if (memberId == null) {
-            throw new GeneralException(ErrorCode.TOKEN_MISSING);
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH401_2", "로그인이 필요한 요청입니다.");
         }
         return memberId;
     }

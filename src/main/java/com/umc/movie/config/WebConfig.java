@@ -1,7 +1,7 @@
 package com.umc.movie.config;
 
-import com.umc.movie.auth.AuthInterceptor;
 import com.umc.movie.auth.LoginMemberArgumentResolver;
+import com.umc.movie.interceptor.AuthInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -18,21 +18,32 @@ public class WebConfig implements WebMvcConfigurer {
     private final AuthInterceptor authInterceptor;
     private final LoginMemberArgumentResolver loginMemberArgumentResolver;
 
+    // 5주차에서 작성한 CORS 설정입니다.
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**") // 모든 경로에 대해
-                .allowedOrigins("http://localhost:5173") // 이 출처에서 오는 요청만 허용
-                .allowedMethods("GET", "POST", "PATCH", "DELETE")
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:5173")
+                .allowedMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
     }
 
-    // 로그인이 필요한 경로만 토큰을 검사합니다. 회원가입·로그인·조회 API는 토큰 없이 호출할 수 있습니다.
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
-                .addPathPatterns("/members/me", "/ratings", "/ratings/**");
+                // 일단 모든 경로를 잠그고
+                .addPathPatterns("/**")
+                // 로그인 없이도 써야 하는 경로만 예외로 열어줍니다
+                .excludePathPatterns(
+                        "/auth/**",              // 로그인
+                        "/members",              // 회원가입 (POST /members)
+                        "/members/nickname/**",  // 닉네임 중복 체크
+                        "/members/email/**",     // 이메일 중복 체크
+                        "/members/*/ratings",    // 유저별 평점 조회 (누구나 볼 수 있는 목록)
+                        "/error"                 // 스프링이 내부적으로 쓰는 경로
+                );
     }
 
+    // 관문이 요청에 담아둔 memberId를 Controller의 @LoginMember 파라미터로 넣어줍니다.
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(loginMemberArgumentResolver);
