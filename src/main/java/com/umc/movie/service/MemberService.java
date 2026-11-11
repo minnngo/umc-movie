@@ -1,16 +1,18 @@
 package com.umc.movie.service;
 
 import com.umc.movie.dto.EmailCheckResponse;
+import com.umc.movie.dto.MemberInfoResponse;
 import com.umc.movie.dto.MemberResponse;
-import com.umc.movie.dto.MyInfoResponse;
 import com.umc.movie.dto.NicknameCheckResponse;
 import com.umc.movie.dto.SignUpRequest;
 import com.umc.movie.dto.UpdateMyInfoRequest;
 import com.umc.movie.entity.Member;
+import com.umc.movie.exception.ApiException;
 import com.umc.movie.exception.ErrorCode;
 import com.umc.movie.exception.GeneralException;
 import com.umc.movie.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,28 +37,29 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public MyInfoResponse getMyInfo(Long memberId) {
-        return MyInfoResponse.from(findMember(memberId));
+    public MemberInfoResponse getMyInfo(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER404_1",
+                        "해당 회원을 찾을 수 없습니다."));
+
+        return MemberInfoResponse.from(member);
     }
 
     @Transactional
-    public MyInfoResponse updateMyInfo(Long memberId, UpdateMyInfoRequest request) {
-        Member member = findMember(memberId);
+    public MemberInfoResponse updateMyInfo(Long memberId, UpdateMyInfoRequest request) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER404_1",
+                        "해당 회원을 찾을 수 없습니다."));
 
         // 지금 닉네임 그대로 보내면 중복이 아니므로 통과시킵니다.
         if (!member.getNickname().equals(request.nickname())
                 && memberRepository.existsByNickname(request.nickname())) {
-            throw new GeneralException(ErrorCode.MEMBER_NICKNAME_DUPLICATED);
+            throw new ApiException(HttpStatus.CONFLICT, "MEMBER409_1", "이미 사용 중인 닉네임입니다.");
         }
 
         // 트랜잭션 안에서 조회한 엔티티라 값만 바꾸면 끝날 때 UPDATE가 실행됩니다. (변경 감지)
         member.updateNickname(request.nickname());
-        return MyInfoResponse.from(member);
-    }
-
-    private Member findMember(Long memberId) {
-        return memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorCode.MEMBER_NOT_FOUND));
+        return MemberInfoResponse.from(member);
     }
 
     @Transactional

@@ -1,22 +1,17 @@
 package com.umc.movie.config;
 
-import com.umc.movie.auth.LoginMemberArgumentResolver;
 import com.umc.movie.interceptor.AuthInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
 
     private final AuthInterceptor authInterceptor;
-    private final LoginMemberArgumentResolver loginMemberArgumentResolver;
 
     // 5주차에서 작성한 CORS 설정입니다.
     @Override
@@ -41,11 +36,5 @@ public class WebConfig implements WebMvcConfigurer {
                         "/members/*/ratings",    // 유저별 평점 조회 (누구나 볼 수 있는 목록)
                         "/error"                 // 스프링이 내부적으로 쓰는 경로
                 );
-    }
-
-    // 관문이 요청에 담아둔 memberId를 Controller의 @LoginMember 파라미터로 넣어줍니다.
-    @Override
-    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-        resolvers.add(loginMemberArgumentResolver);
     }
 }
