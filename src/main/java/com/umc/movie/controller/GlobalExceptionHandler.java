@@ -1,6 +1,7 @@
 package com.umc.movie.controller;
 
 import com.umc.movie.dto.ApiResponse;
+import com.umc.movie.exception.ApiException;
 import com.umc.movie.exception.ErrorCode;
 import com.umc.movie.exception.GeneralException;
 import org.hibernate.exception.ConstraintViolationException;
@@ -28,6 +29,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(GeneralException.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(GeneralException exception) {
         return toResponse(exception.getErrorCode());
+    }
+
+    // 우리가 직접 던진 예외입니다. 예외가 들고 온 상태 코드와 코드 문자열을 그대로 씁니다.
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException exception) {
+        return ResponseEntity.status(exception.getStatus())
+                .body(ApiResponse.failure(exception.getCode(), exception.getMessage()));
     }
 
     /**
