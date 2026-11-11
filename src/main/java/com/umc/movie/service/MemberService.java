@@ -3,9 +3,9 @@ package com.umc.movie.service;
 import com.umc.movie.dto.EmailCheckResponse;
 import com.umc.movie.dto.MemberInfoResponse;
 import com.umc.movie.dto.MemberResponse;
+import com.umc.movie.dto.MemberUpdateRequest;
 import com.umc.movie.dto.NicknameCheckResponse;
 import com.umc.movie.dto.SignUpRequest;
-import com.umc.movie.dto.UpdateMyInfoRequest;
 import com.umc.movie.entity.Member;
 import com.umc.movie.exception.ApiException;
 import com.umc.movie.exception.ErrorCode;
@@ -46,19 +46,21 @@ public class MemberService {
     }
 
     @Transactional
-    public MemberInfoResponse updateMyInfo(Long memberId, UpdateMyInfoRequest request) {
+    public MemberInfoResponse updateMyInfo(Long memberId, MemberUpdateRequest request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER404_1",
                         "해당 회원을 찾을 수 없습니다."));
 
-        // 지금 닉네임 그대로 보내면 중복이 아니므로 통과시킵니다.
-        if (!member.getNickname().equals(request.nickname())
-                && memberRepository.existsByNickname(request.nickname())) {
-            throw new ApiException(HttpStatus.CONFLICT, "MEMBER409_1", "이미 사용 중인 닉네임입니다.");
+        // 나를 제외한 다른 회원이 그 닉네임을 쓰고 있다면 막습니다.
+        // DB에도 UNIQUE 제약이 걸려 있지만 제약 위반 예외 대신 우리가 정한 응답을 주기 위해 먼저 확인합니다.
+        if (memberRepository.existsByNicknameAndMemberIdNot(request.nickname(), memberId)) {
+            throw new ApiException(HttpStatus.CONFLICT, "MEMBER409_1",
+                    "이미 사용 중인 닉네임입니다.");
         }
 
-        // 트랜잭션 안에서 조회한 엔티티라 값만 바꾸면 끝날 때 UPDATE가 실행됩니다. (변경 감지)
         member.updateNickname(request.nickname());
+        memberRepository.save(member);
+
         return MemberInfoResponse.from(member);
     }
 
