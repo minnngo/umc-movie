@@ -30,8 +30,8 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-  distribution:
-    percentiles-histogram:
-      http.server.requests: true
-    slo:
-      http.server.requests: 50ms,100ms,200ms,300ms,500ms,800ms,1500ms,3s
+    distribution:   # management.metrics.distribution — metrics 하위여야 _bucket 이 나온다
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,300ms,500ms,800ms,1500ms,3s

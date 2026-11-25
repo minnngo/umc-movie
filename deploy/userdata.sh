@@ -38,5 +38,44 @@ chmod +x /opt/umc/swap.sh
 # 2. 부팅 때 한 번 실행
 /opt/umc/swap.sh
 
-# 3. Alloy Config
-# 2주차 워크북에서 추가
+# 3. 관측 수집기 (Alloy) — 2주차
+#    SSM 값을 환경변수로 올리고 → remotecfg 설정 파일을 쓰고 → Alloy 를 띄운다.
+#    수집 내용(host/mysql/app)은 Fleet Management 파이프라인에서 받아온다.
+REGION=__REGION__
+p() { aws ssm get-parameter --region $REGION --name "/umc/app/$1" --with-decryption \
+        --query Parameter.Value --output text; }
+export GC_FLEET_URL=$(p gc-fleet-url)
+export GC_FLEET_USER=$(p gc-fleet-user)
+export GC_TOKEN=$(p gc-token)
+export GCLOUD_RW_API_KEY="$GC_TOKEN"   # Grafana 기본 self-monitoring 파이프라인이 쓰는 이름
+export GC_PROM_URL=$(p gc-prom-url)
+export GC_PROM_USER=$(p gc-prom-user)
+export MYSQL_DSN=$(p mysql-dsn)
+export APP_METRICS_PATH=/actuator/prometheus   # Spring 은 /metrics 가 아니다
+export APP_METRICS_ADDR=127.0.0.1:3000
+
+mkdir -p /opt/alloy /var/lib/alloy
+cat > /opt/alloy/config.alloy <<'ALLOY'
+logging { level = "info" }
+
+remotecfg {
+  url = sys.env("GC_FLEET_URL")
+  basic_auth {
+    username = sys.env("GC_FLEET_USER")
+    password = sys.env("GC_TOKEN")
+  }
+  id             = constants.hostname
+  poll_frequency = "5m"
+}
+ALLOY
+
+docker rm -f alloy >/dev/null 2>&1 || true
+docker run -d --name alloy --restart unless-stopped \
+  --network host --pid host \
+  -v /:/rootfs:ro -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v /opt/alloy/config.alloy:/etc/alloy/config.alloy:ro \
+  -v /var/lib/alloy:/var/lib/alloy \
+  -e GC_FLEET_URL -e GC_FLEET_USER -e GC_TOKEN \
+  -e GC_PROM_URL -e GC_PROM_USER -e MYSQL_DSN \
+  -e GCLOUD_RW_API_KEY -e APP_METRICS_PATH -e APP_METRICS_ADDR \
+  grafana/alloy:v1.20.1 run --storage.path=/var/lib/alloy /etc/alloy/config.alloy

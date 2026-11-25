@@ -50,8 +50,9 @@ build_push() {
   uri=$(ecr_uri)
   tag=$(next_tag)
   aws ecr get-login-password | docker login --username AWS --password-stdin "${uri%%/*}" >&2
-  docker build --platform linux/arm64 -t "${uri}:${tag}" . >&2
-  docker push "${uri}:${tag}" >&2
+  # $( ) 안에서는 set -e 가 안 먹으므로 직접 실패를 돌려준다 (빌드 실패 시 배포 중단)
+  docker build --platform linux/arm64 -t "${uri}:${tag}" . >&2 || return 1
+  docker push "${uri}:${tag}" >&2 || return 1
   echo "${uri}:${tag}"
 }
 
