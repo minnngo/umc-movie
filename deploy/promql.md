@@ -49,8 +49,10 @@ $F = application="movie", uri!~"/actuator.*|/health"
 histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{application="movie", uri!~"/actuator.*|/health"}[1m]))) or vector(0)
 ```
 
-- 조건: `IS ABOVE 1` (초 단위), pending period `1m`
-- 트래픽이 없을 때 `histogram_quantile` 은 `NaN` 을 냅니다. `NaN > 1` 은 거짓이라 발화하지 않으므로 OK 로 남습니다.
+- 조건: `IS ABOVE 0.5` (초 단위), pending period `1m`
+- `1` 로 잡으면 포화 상태에서도 거의 울리지 않습니다. 앱 타이머는 Tomcat 스레드가 요청을 집은 뒤부터 재므로,
+  포화 시 대부분의 대기(TCP·accept 큐)가 빠집니다. 실측: 클라이언트 p95 4.2s 일 때 앱 p95 ≈ 1.0s.
+- 트래픽이 없을 때 `histogram_quantile` 은 `NaN` 을 냅니다. `NaN > 0.5` 은 거짓이라 발화하지 않으므로 OK 로 남습니다.
   `No data` 는 `or vector(0)` 으로 막습니다.
 
 ### 5xx 에러율 (워크북 7.2)
