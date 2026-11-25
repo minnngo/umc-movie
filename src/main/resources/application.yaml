@@ -2,14 +2,22 @@ spring:
   application:
     name: movie
   datasource:
-    url: jdbc:mysql://localhost:3306/umc_movie
-    username: root
+    # 로컬은 기본값(localhost/umc_movie/root) 그대로, EC2 에서는 swap.sh 가 넘겨주는 환경변수로 덮어씁니다
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:umc_movie}
+    username: ${DB_USER:root}
     password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  lifecycle:
+    # SIGTERM 을 받으면 처리 중인 요청을 최대 20초까지 마치고 종료합니다
+    timeout-per-shutdown-phase: 20s
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
 
 jwt:
   secret: ${JWT_SECRET} # 서명에 쓸 비밀키. 코드에 직접 쓰지 않습니다
-  access-expiration: ${JWT_ACCESS_EXPIRATION} # 토큰 유효시간(초)
+  access-expiration: ${JWT_ACCESS_EXPIRATION:3600} # 토큰 유효시간(초)
