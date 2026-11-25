@@ -21,3 +21,17 @@ server:
 jwt:
   secret: ${JWT_SECRET} # 서명에 쓸 비밀키. 코드에 직접 쓰지 않습니다
   access-expiration: ${JWT_ACCESS_EXPIRATION:3600} # 토큰 유효시간(초)
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:   # management.metrics.distribution — metrics 하위여야 _bucket 이 나온다
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,300ms,500ms,800ms,1500ms,3s
